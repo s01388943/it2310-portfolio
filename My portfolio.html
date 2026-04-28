@@ -1,0 +1,1797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Start Screen</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/press-start-2p@5.0.3/index.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Press Start 2P', monospace;
+    overflow: hidden;
+  }
+
+  #screen {
+    width: 512px;
+    height: 480px;
+    background: #E87820;
+    position: relative;
+    image-rendering: pixelated;
+    overflow: hidden;
+    border: 4px solid #000;
+  }
+
+  /* Sky gradient via layered divs */
+  #sky {
+    position: absolute;
+    inset: 0;
+    background: #E87820;
+  }
+
+  /* Checkerboard top border */
+  .checker-bar {
+    position: absolute;
+    left: 0; right: 0;
+    height: 32px;
+    display: flex;
+    z-index: 10;
+  }
+  #checker-top { top: 0; }
+  #checker-bottom { bottom: 0; }
+
+  .checker-cell {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+  }
+
+  /* Clouds */
+  .cloud {
+    position: absolute;
+    background: #F8F8F8;
+    image-rendering: pixelated;
+  }
+
+  /* Ground strip */
+  #ground {
+    position: absolute;
+    bottom: 32px;
+    left: 0; right: 0;
+    height: 40px;
+    background: #70C820;
+    z-index: 3;
+  }
+  #ground::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 8px;
+    background: #58A010;
+  }
+  #ground::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 8px;
+    background: #C88040;
+  }
+
+  /* Bushes */
+  .bush {
+    position: absolute;
+    bottom: 72px;
+    z-index: 4;
+  }
+
+  /* Title card */
+  #title-card {
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    text-align: center;
+    width: 90%;
+  }
+
+  #title-top {
+    font-size: 10px;
+    color: #F8D030;
+    text-shadow:
+      2px 0 #000, -2px 0 #000, 0 2px #000, 0 -2px #000,
+      2px 2px #000, -2px -2px #000, 2px -2px #000, -2px 2px #000;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  #title-main {
+    font-size: 26px;
+    line-height: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .title-row {
+    display: block;
+    color: #F8F8F8;
+    text-shadow:
+      3px 0 #B82000, -3px 0 #B82000, 0 3px #B82000, 0 -3px #B82000,
+      3px 3px #B82000, -3px -3px #B82000, 3px -3px #B82000, -3px 3px #B82000,
+      4px 4px 0 #000, -4px 4px 0 #000, 4px -4px 0 #000, -4px -4px 0 #000;
+    letter-spacing: 4px;
+  }
+
+  .title-row.big {
+    font-size: 28px;
+  }
+
+  /* Menu */
+  #menu {
+    position: absolute;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    width: 80%;
+    text-align: center;
+  }
+
+  .menu-item {
+    font-size: 9px;
+    color: #F8F8F8;
+    text-shadow: 2px 2px #000, 1px 1px #000;
+    margin: 14px 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    transition: color 0.1s;
+    letter-spacing: 1px;
+  }
+
+  .menu-item:hover { color: #F8D030; }
+
+  .arrow {
+    color: #F8D030;
+    display: inline-block;
+    font-size: 9px;
+    width: 12px;
+    text-align: right;
+  }
+
+  .arrow.hidden { visibility: hidden; }
+
+  /* Stars */
+  .star {
+    position: absolute;
+    background: #F8F8F8;
+    z-index: 5;
+  }
+
+  /* Coin sparkles */
+  @keyframes blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+  }
+
+  @keyframes cloudFloat {
+    0% { transform: translateX(0); }
+    50% { transform: translateX(8px); }
+    100% { transform: translateX(0); }
+  }
+
+  @keyframes screenFadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes titleBounce {
+    0% { transform: translateX(-50%) translateY(-30px); opacity: 0; }
+    60% { transform: translateX(-50%) translateY(6px); opacity: 1; }
+    80% { transform: translateX(-50%) translateY(-4px); }
+    100% { transform: translateX(-50%) translateY(0); }
+  }
+
+  @keyframes press-glow {
+    0%, 100% { color: #F8D030; text-shadow: 2px 2px #000; }
+    50% { color: #F8F8F8; text-shadow: 2px 2px #000; }
+  }
+
+  #screen { animation: screenFadeIn 0.5s ease-out both; }
+  #title-card { animation: titleBounce 0.8s 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+
+  #press-start {
+    position: absolute;
+    bottom: 72px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 8px;
+    color: #F8D030;
+    text-shadow: 2px 2px #000;
+    z-index: 20;
+    animation: blink 1s step-end infinite;
+    letter-spacing: 1px;
+  }
+
+  /* Overlay for transition */
+  #fade-overlay {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 100;
+    transition: opacity 0.6s ease;
+  }
+
+  #fade-overlay.active { opacity: 1; }
+
+  /* Decorative coins */
+  .coin {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: #F8D030;
+    z-index: 6;
+    border: 2px solid #B86000;
+  }
+
+  /* pixel border decoration around title */
+  #title-border {
+    position: absolute;
+    top: 38px;
+    left: 12px;
+    right: 12px;
+    height: 140px;
+    border: 4px solid #F8D030;
+    z-index: 15;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 2px #B86000, 0 0 0 2px #B86000;
+  }
+
+  /* ===== CONTACT SCREEN ===== */
+  #contact-screen {
+    position: absolute;
+    inset: 0;
+    background: #E87820;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 44px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+    overflow: hidden;
+  }
+  #contact-screen.visible {
+    opacity: 1;
+    pointer-events: all;
+  }
+  #contact-title {
+    font-size: 11px;
+    color: #F8D030;
+    letter-spacing: 3px;
+    text-shadow: 2px 2px #000, -1px -1px #000, 1px -1px #000, -1px 1px #000;
+    margin-bottom: 6px;
+  }
+  #contact-subtitle {
+    font-size: 7px;
+    color: #F8F8F8;
+    letter-spacing: 1px;
+    text-shadow: 1px 1px #000;
+    margin-bottom: 18px;
+  }
+  .contact-form-box {
+    background: #000;
+    border: 4px solid #F8D030;
+    padding: 20px 24px;
+    width: 86%;
+    box-shadow: 4px 4px 0 #B86000, inset 0 0 0 2px #B86000;
+  }
+  .field-label {
+    font-size: 7px;
+    color: #F8D030;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+    display: block;
+    text-shadow: 1px 1px #000;
+  }
+  .pixel-input {
+    width: 100%;
+    background: #1a1a2e;
+    border: 3px solid #F8D030;
+    color: #F8F8F8;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    padding: 7px 8px;
+    margin-bottom: 14px;
+    outline: none;
+    box-sizing: border-box;
+    letter-spacing: 1px;
+  }
+  .pixel-input:focus {
+    border-color: #F8F8F8;
+    background: #16213e;
+    box-shadow: 0 0 0 2px #F8D030;
+  }
+  .pixel-input::placeholder { color: #555; }
+  .form-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+    justify-content: space-between;
+  }
+  .pixel-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    padding: 8px 12px;
+    border: 3px solid #F8D030;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: background 0.1s, color 0.1s;
+    flex: 1;
+  }
+  .pixel-btn.submit {
+    background: #F8D030;
+    color: #000;
+  }
+  .pixel-btn.submit:hover { background: #fff; border-color: #fff; }
+  .pixel-btn.back {
+    background: #000;
+    color: #F8D030;
+  }
+  .pixel-btn.back:hover { background: #F8D030; color: #000; }
+  #form-msg {
+    font-size: 7px;
+    margin-top: 10px;
+    text-align: center;
+    min-height: 14px;
+    letter-spacing: 1px;
+  }
+  #form-msg.success { color: #70E010; text-shadow: 1px 1px #000; }
+  #form-msg.error   { color: #F84040; text-shadow: 1px 1px #000; }
+
+  /* Contact checker bars */
+  .contact-checker {
+    position: absolute;
+    left: 0; right: 0;
+    height: 32px;
+    display: flex;
+    z-index: 10;
+    pointer-events: none;
+  }
+  #cc-top { top: 0; }
+  #cc-bottom { bottom: 0; }
+
+  /* ===== PORTFOLIO IFRAME OVERLAY ===== */
+  #portfolio-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+  #portfolio-overlay.visible {
+    opacity: 1;
+    pointer-events: all;
+  }
+  #portfolio-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+  }
+
+</style>
+</head>
+<body>
+
+<div id="screen">
+  <div id="sky"></div>
+  <div id="fade-overlay"></div>
+
+  <!-- Checkerboard borders -->
+  <div class="checker-bar" id="checker-top"></div>
+  <div class="checker-bar" id="checker-bottom"></div>
+
+  <!-- Ground -->
+  <div id="ground"></div>
+
+  <!-- Title border frame -->
+  <div id="title-border"></div>
+
+  <!-- Title -->
+  <div id="title-card">
+    <span id="title-top">WELCOME TO</span>
+    <div id="title-main">
+      <span class="title-row big">MY</span>
+      <span class="title-row" style="font-size:20px; letter-spacing:6px;">PORTFOLIO</span>
+    </div>
+  </div>
+
+  <!-- Menu -->
+  <div id="menu">
+    <div class="menu-item" data-index="0">
+      <span class="arrow" id="arr-0">&#9658;</span>
+      <span>ABOUT ME</span>
+    </div>
+    <div class="menu-item" data-index="1">
+      <span class="arrow hidden" id="arr-1">&#9658;</span>
+      <span>CONTACT ME</span>
+    </div>
+    <div class="menu-item" data-index="2">
+      <span class="arrow hidden" id="arr-2">&#9658;</span>
+      <span>MY OTHER PROJECTS</span>
+    </div>
+  </div>
+
+  <!-- Press Start -->
+  <div id="press-start">- - PRESS START - -</div>
+
+
+  <!-- Contact Screen -->
+  <div id="contact-screen">
+    <div class="contact-checker" id="cc-top"></div>
+    <div class="contact-checker" id="cc-bottom"></div>
+    <div id="contact-title">CONTACT ME</div>
+    <div id="contact-subtitle">SEND ME A MESSAGE !</div>
+    <div class="contact-form-box">
+      <label class="field-label">&#9658; YOUR NAME</label>
+      <input class="pixel-input" id="c-name" type="text" placeholder="ENTER YOUR NAME" maxlength="40" autocomplete="off"/>
+      <label class="field-label">&#9658; YOUR EMAIL</label>
+      <input class="pixel-input" id="c-email" type="email" placeholder="YOUR@EMAIL.COM" maxlength="60" autocomplete="off"/>
+      <label class="field-label">&#9658; PHONE NUMBER</label>
+      <input class="pixel-input" id="c-phone" type="tel" placeholder="(123) 456-7890" maxlength="20" autocomplete="off"/>
+      <div class="form-buttons">
+        <button class="pixel-btn back" id="back-btn">&#9664; BACK</button>
+        <button class="pixel-btn submit" id="submit-btn">SEND &#9654;</button>
+      </div>
+      <div id="form-msg"></div>
+    </div>
+  </div>
+</div>
+
+  <!-- Portfolio Overlay -->
+  <div id="portfolio-overlay">
+    <iframe id="portfolio-iframe" srcdoc="<!DOCTYPE html>
+
+<html lang=&quot;en&quot;>
+
+<head>
+
+  <meta charset=&quot;utf-8&quot; />
+
+  <meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot; />
+
+  <title>Antwon Woods · Software Developer Portfolio</title>
+
+  <meta name=&quot;description&quot; content=&quot;Antwon Woods' professional portfolio — recent IT graduate and Software Developer specializing in HTML, CSS, JavaScript, Python, and Git.&quot; />
+
+  <!-- Open Graph (social preview) -->
+
+  <meta property=&quot;og:title&quot; content=&quot;Antwon Woods · Software Developer&quot; />
+
+  <meta property=&quot;og:description&quot; content=&quot;Portfolio website showcasing skills, projects, and experience.&quot; />
+
+  <meta property=&quot;og:type&quot; content=&quot;website&quot; />
+
+  <meta property=&quot;og:url&quot; content=&quot;&quot; />
+
+  <!-- JSON-LD Person schema for basic SEO -->
+
+  <script type=&quot;application/ld+json&quot;>
+
+  {
+
+    &quot;@context&quot;:&quot;https://schema.org&quot;,
+
+    &quot;@type&quot;:&quot;Person&quot;,
+
+    &quot;name&quot;:&quot;Antwon Woods&quot;,
+
+    &quot;jobTitle&quot;:&quot;Software Developer&quot;,
+
+    &quot;email&quot;:&quot;mailto:antwonwoods369@gmail.com&quot;,
+
+    &quot;telephone&quot;:&quot;216-307-9076&quot;,
+
+    &quot;address&quot;:{&quot;@type&quot;:&quot;PostalAddress&quot;,&quot;addressLocality&quot;:&quot;Cleveland, OH&quot;,&quot;addressCountry&quot;:&quot;US&quot;},
+
+    &quot;url&quot;:&quot;&quot;
+
+  }
+
+  </script>
+
+  <style>
+
+    /* ============ THEME TOKENS ============ */
+
+    :root{
+
+      --bg: #0b0e14;
+
+      --surface: #121826;
+
+      --text: #e6eaf2;
+
+      --muted: #a4adbe;
+
+      --primary: #6bc46d;
+
+      --accent: #7aa2f7;
+
+      --ring: #2dd4bf;
+
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+
+    }
+
+    :root.light{
+
+      --bg: #ffffff;
+
+      --surface: #f6f8fb;
+
+      --text: #111827;
+
+      --muted: #4b5563;
+
+      --primary: #2563eb;
+
+      --accent: #111827;
+
+      --ring: #3b82f6;
+
+      --shadow: 0 6px 20px rgba(0,0,0,.08);
+
+    }
+
+    /* ============ GLOBAL RESETS ============ */
+
+    *{box-sizing:border-box}
+
+    html,body{margin:0;padding:0}
+
+    body{
+
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+
+      background: var(--bg);
+
+      color: var(--text);
+
+      line-height: 1.6;
+
+    }
+
+    img{max-width:100%;display:block}
+
+    a{color:var(--accent);text-decoration:none}
+
+    a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
+
+      outline:2px solid var(--ring);outline-offset:2px
+
+    }
+
+    .skip-link{
+
+      position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden
+
+    }
+
+    .skip-link:focus{
+
+      left:1rem;top:1rem;width:auto;height:auto;background:var(--ring);color:#000;
+
+      padding:.5rem .75rem;border-radius:.5rem
+
+    }
+
+    /* ============ HEADER / NAV ============ */
+
+    .site-header{
+
+      position:sticky;top:0;background:rgba(18,24,38,.85);
+
+      backdrop-filter: blur(8px);z-index:50
+
+    }
+
+    .nav{
+
+      display:flex;justify-content:space-between;align-items:center;
+
+      padding:.75rem 1rem;max-width:1100px;margin:0 auto
+
+    }
+
+    .nav__list{display:flex;gap:1rem;list-style:none;margin:0;padding:0}
+
+    .nav__list a{padding:.5rem .75rem;border-radius:.5rem}
+
+    .nav__list a:hover{background:rgba(255,255,255,.06)}
+
+    /* ============ HERO ============ */
+
+    .hero{max-width:1100px;margin:0 auto;padding:2rem 1rem 1rem}
+
+    .hero__content{
+
+      display:grid;grid-template-columns:120px 1fr;gap:1.25rem;align-items:center
+
+    }
+
+    .hero__avatar{
+
+      width:120px;height:120px;border-radius:50%;box-shadow:var(--shadow);
+
+      background: radial-gradient(120px 120px at 50% 30%, #3b82f6, #6bc46d)
+
+    }
+
+    .subtitle{margin:.25rem 0 .75rem;color:var(--muted)}
+
+    .lead{color:var(--text)}
+
+    .hero__actions{display:flex;gap:.75rem;margin-top:1rem}
+
+    .contact-bar{
+
+      display:flex;flex-wrap:wrap;gap:.75rem;list-style:none;padding:0;margin:1rem 0 0;color:var(--muted)
+
+    }
+
+    .contact-bar a{color:inherit}
+
+    /* ============ SECTIONS ============ */
+
+    .section{max-width:1100px;margin:0 auto;padding:2rem 1rem}
+
+    .section__head{display:flex;justify-content:space-between;align-items:center;gap:1rem}
+
+    .highlights{display:grid;gap:.5rem}
+
+    /* ============ CHIPS &amp; TAGS ============ */
+
+    .chip-group{display:flex;flex-wrap:wrap;gap:.5rem}
+
+    .chip{
+
+      background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+
+      padding:.25rem .6rem;border-radius:999px
+
+    }
+
+    .chip.filter.is-active{background:var(--primary);color:#fff;border-color:transparent}
+
+    /* ============ GRID &amp; CARDS ============ */
+
+    .grid{display:grid;gap:1rem}
+
+    .projects-grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+
+    .card{
+
+      background:var(--surface);border:1px solid rgba(255,255,255,.08);
+
+      border-radius:.75rem;overflow:hidden;box-shadow:var(--shadow)
+
+    }
+
+    .card__img{aspect-ratio:3/2;object-fit:cover}
+
+    .card__body{padding:1rem}
+
+    .card__actions{margin-top:.5rem}
+
+    .tags{
+
+      display:flex;gap:.5rem;list-style:none;margin:.5rem 0 0;padding:0;color:var(--muted)
+
+    }
+
+    /* ============ EXPERIENCE ============ */
+
+    .timeline{display:grid;gap:1rem}
+
+    .timeline__item{
+
+      background:var(--surface);border:1px solid rgba(255,255,255,.08);
+
+      border-radius:.75rem;padding:1rem
+
+    }
+
+    .muted{color:var(--muted)}
+
+    .note{color:var(--muted);font-style:italic}
+
+    /* ============ FORM ============ */
+
+    .form{display:grid;gap:1rem;max-width:700px}
+
+    .field{display:grid;gap:.25rem}
+
+    input,textarea{
+
+      background:var(--surface);color:var(--text);
+
+      border:1px solid rgba(255,255,255,.12);border-radius:.5rem;padding:.6rem .75rem
+
+    }
+
+    .error{color:#ef4444;min-height:1.2em}
+
+    .form__actions{display:flex;gap:.75rem}
+
+    .form__status{margin-top:.5rem;color:var(--muted)}
+
+    /* ============ BUTTONS ============ */
+
+    .btn{background:var(--primary);color:#fff;border:none;padding:.6rem .9rem;border-radius:.6rem;cursor:pointer}
+
+    .btn:hover{filter:brightness(1.05)}
+
+    .btn-outline{background:transparent;border:1px solid var(--primary);color:var(--primary)}
+
+    .btn-ghost{background:transparent;border:none;color:var(--text);padding:.35rem .5rem}
+
+    .btn-sm{font-size:.9rem;padding:.4rem .6rem}
+
+    /* ============ MISC ============ */
+
+    .back-to-top{
+
+      position:fixed;right:1rem;bottom:1rem;display:none;background:var(--accent);
+
+      color:#fff;border:none;border-radius:999px;width:42px;height:42px
+
+    }
+
+    .site-footer{border-top:1px solid rgba(255,255,255,.08);padding:1rem;text-align:center;color:var(--muted)}
+
+    /* ============ MODAL ============ */
+
+    dialog::backdrop{background:rgba(0,0,0,.5)}
+
+    .modal{max-width:720px}
+
+    .modal__header, .modal__footer{
+
+      display:flex;justify-content:space-between;align-items:center;gap:1rem
+
+    }
+
+    .modal__header{border-bottom:1px solid rgba(255,255,255,.08)}
+
+    .modal__body{padding:1rem 0}
+
+
+    #back-to-start {
+      background: transparent;
+      border: 1px solid rgba(107,196,109,0.4);
+      color: var(--primary);
+      font-size: .85rem;
+      padding: .4rem .75rem;
+      border-radius: .5rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    #back-to-start:hover { background: rgba(107,196,109,0.1); }
+
+    /* ============ RESPONSIVE ============ */
+
+    @media (max-width: 640px){
+
+      .hero__content{grid-template-columns:1fr}
+
+      .hero__avatar{justify-self:center}
+
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+  <a class=&quot;skip-link&quot; href=&quot;#main&quot;>Skip to main content</a>
+
+  <header class=&quot;site-header&quot; role=&quot;banner&quot;>
+
+    <nav class=&quot;nav&quot; aria-label=&quot;Primary&quot;>
+
+      <button id=&quot;back-to-start&quot; onclick=&quot;window.parent.postMessage('back-to-start', '*')&quot; title=&quot;Back to Start Screen&quot;>← Start Screen</button>
+      <button id=&quot;themeToggle&quot; class=&quot;btn btn-ghost&quot; aria-pressed=&quot;false&quot; aria-label=&quot;Toggle dark mode&quot;>🌓</button>
+
+      <ul class=&quot;nav__list&quot;>
+
+        <li><a href=&quot;#about&quot;>About</a></li>
+
+        <li><a href=&quot;#skills&quot;>Skills</a></li>
+
+        <li><a href=&quot;#projects&quot;>Projects</a></li>
+
+        <li><a href=&quot;#experience&quot;>Experience</a></li>
+
+        <li><a href=&quot;#education&quot;>Education</a></li>
+
+        <li><a href=&quot;#contact&quot;>Contact</a></li>
+
+      </ul>
+
+    </nav>
+
+    <section class=&quot;hero&quot; aria-labelledby=&quot;intro-title&quot;>
+
+      <div class=&quot;hero__content&quot;>
+
+        <div class=&quot;hero__avatar&quot; role=&quot;img&quot; aria-label=&quot;Portrait placeholder for Antwon Woods&quot;></div>
+
+        <div>
+
+          <h1 id=&quot;intro-title&quot;>Antwon Woods</h1>
+
+          <p class=&quot;subtitle&quot;>Software Developer · Recent IT graduate</p>
+
+          <p class=&quot;lead&quot;>I build fast, accessible, and responsive web experiences using HTML, CSS, JavaScript, and Python. I'm passionate about clean code, clear UX, and continuous learning.</p>
+
+          <div class=&quot;hero__actions&quot;>
+
+            <a class=&quot;btn&quot; href=&quot;#projects&quot;>View Projects</a>
+
+            <a class=&quot;btn btn-outline&quot; id=&quot;downloadResume&quot; href=&quot;#&quot;>Download Résumé</a>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <ul class=&quot;contact-bar&quot; aria-label=&quot;Contact methods&quot;>
+
+        <li><a href=&quot;mailto:antwonwoods369@gmail.com&quot; data-copy=&quot;antwonwoods369@gmail.com&quot; class=&quot;copyable&quot; title=&quot;Email&quot;>✉️ antwonwoods369@gmail.com</a></li>
+
+        <li><a href=&quot;tel:216-307-9076&quot; title=&quot;Phone&quot;>📞 216-307-9076</a></li>
+
+        <li><span title=&quot;Location&quot;>📍 Cleveland, OH</span></li>
+
+        <li><a href=&quot;https://github.com/&quot; target=&quot;_blank&quot; rel=&quot;noreferrer noopener&quot; title=&quot;GitHub&quot;>🐙 GitHub</a></li>
+
+        <li><a href=&quot;https://www.linkedin.com/&quot; target=&quot;_blank&quot; rel=&quot;noreferrer noopener&quot; title=&quot;LinkedIn&quot;>🔗 LinkedIn</a></li>
+
+      </ul>
+
+    </section>
+
+  </header>
+
+  <main id=&quot;main&quot; tabindex=&quot;-1&quot;>
+
+    <!-- About -->
+
+    <section id=&quot;about&quot; class=&quot;section&quot; aria-labelledby=&quot;about-title&quot;>
+
+      <h2 id=&quot;about-title&quot;>About</h2>
+
+      <p>Hi, I'm Antwon. I recently completed IT coursework and focus on front-end development and scripting. I enjoy turning requirements into simple, usable interfaces and automating repetitive tasks.</p>
+
+      <ul class=&quot;highlights&quot;>
+
+        <li>Strong with semantic HTML, modern CSS (Flexbox, Grid), and vanilla JavaScript.</li>
+
+        <li>Comfortable with Python for scripting and data tasks.</li>
+
+        <li>Version control with Git/GitHub; familiar with PRs and resolving merge conflicts.</li>
+
+      </ul>
+
+    </section>
+
+    <!-- Skills -->
+
+    <section id=&quot;skills&quot; class=&quot;section&quot; aria-labelledby=&quot;skills-title&quot;>
+
+      <h2 id=&quot;skills-title&quot;>Skills</h2>
+
+      <div class=&quot;chip-group&quot;>
+
+        <span class=&quot;chip&quot;>HTML5</span>
+
+        <span class=&quot;chip&quot;>CSS3</span>
+
+        <span class=&quot;chip&quot;>JavaScript (ES6+)</span>
+
+        <span class=&quot;chip&quot;>Python</span>
+
+        <span class=&quot;chip&quot;>Git &amp; GitHub</span>
+
+        <span class=&quot;chip&quot;>Responsive Design</span>
+
+        <span class=&quot;chip&quot;>Accessibility (a11y)</span>
+
+      </div>
+
+    </section>
+
+    <!-- Projects -->
+
+    <section id=&quot;projects&quot; class=&quot;section&quot; aria-labelledby=&quot;projects-title&quot;>
+
+      <div class=&quot;section__head&quot;>
+
+        <h2 id=&quot;projects-title&quot;>Projects</h2>
+
+        <div class=&quot;filters&quot; role=&quot;group&quot; aria-label=&quot;Filter projects&quot;>
+
+          <button class=&quot;chip filter is-active&quot; data-filter=&quot;all&quot;>All</button>
+
+          <button class=&quot;chip filter&quot; data-filter=&quot;web&quot;>Web</button>
+
+          <button class=&quot;chip filter&quot; data-filter=&quot;python&quot;>Python</button>
+
+          <button class=&quot;chip filter&quot; data-filter=&quot;api&quot;>API</button>
+
+        </div>
+
+      </div>
+
+      <div class=&quot;grid projects-grid&quot;>
+
+        <!-- Project 1 -->
+
+        <article class=&quot;card project&quot; data-tags=&quot;web&quot; aria-labelledby=&quot;p1-title&quot;>
+
+          <img class=&quot;card__img&quot; src=&quot;https://picsum.photos/seed/portfolio/600/400&quot; alt=&quot;Screenshot placeholder for personal portfolio website&quot;/>
+
+          <div class=&quot;card__body&quot;>
+
+            <h3 id=&quot;p1-title&quot;>Personal Portfolio Website</h3>
+
+            <p>Single-page site built with semantic HTML, modern CSS, and vanilla JS featuring dark mode and filtering.</p>
+
+            <ul class=&quot;tags&quot;><li>HTML</li><li>CSS</li><li>JS</li></ul>
+
+            <div class=&quot;card__actions&quot;><button class=&quot;btn btn-sm details-btn&quot; data-project=&quot;p1&quot;>Details</button></div>
+
+          </div>
+
+        </article>
+
+        <!-- Project 2 -->
+
+        <article class=&quot;card project&quot; data-tags=&quot;web api&quot; aria-labelledby=&quot;p2-title&quot;>
+
+          <img class=&quot;card__img&quot; src=&quot;https://picsum.photos/seed/weather/600/400&quot; alt=&quot;Screenshot placeholder for weather app&quot;/>
+
+          <div class=&quot;card__body&quot;>
+
+            <h3 id=&quot;p2-title&quot;>Weather App</h3>
+
+            <p>Fetches current conditions from an API and displays a 5day forecast. Includes error states and loading skeletons.</p>
+
+            <ul class=&quot;tags&quot;><li>JS</li><li>API</li><li>CSS</li></ul>
+
+            <div class=&quot;card__actions&quot;><button class=&quot;btn btn-sm details-btn&quot; data-project=&quot;p2&quot;>Details</button></div>
+
+          </div>
+
+        </article>
+
+        <!-- Project 3 -->
+
+        <article class=&quot;card project&quot; data-tags=&quot;python&quot; aria-labelledby=&quot;p3-title&quot;>
+
+          <img class=&quot;card__img&quot; src=&quot;https://picsum.photos/seed/python/600/400&quot; alt=&quot;Screenshot placeholder for python data project&quot;/>
+
+          <div class=&quot;card__body&quot;>
+
+            <h3 id=&quot;p3-title&quot;>Data Cleanup Script</h3>
+
+            <p>Python script that normalizes CSV files and generates summary stats and charts.</p>
+
+            <ul class=&quot;tags&quot;><li>Python</li><li>Pandas</li></ul>
+
+            <div class=&quot;card__actions&quot;><button class=&quot;btn btn-sm details-btn&quot; data-project=&quot;p3&quot;>Details</button></div>
+
+          </div>
+
+        </article>
+
+      </div>
+
+    </section>
+
+    <!-- Experience -->
+
+    <section id=&quot;experience&quot; class=&quot;section&quot; aria-labelledby=&quot;exp-title&quot;>
+
+      <h2 id=&quot;exp-title&quot;>Experience</h2>
+
+      <article class=&quot;timeline&quot;>
+
+        <div class=&quot;timeline__item&quot;>
+
+          <h3>Junior Web Developer <span class=&quot;muted&quot;>— Project-based</span></h3>
+
+          <p>Implemented a responsive portfolio site with dark mode, project filtering, and form validation.</p>
+
+          <ul>
+
+            <li>Wrote semantic HTML and organized CSS with custom properties and utility classes.</li>
+
+            <li>Added accessible components (skip links, focus styles, ARIA labels).</li>
+
+            <li>Deployed to GitHub Pages and set up basic CI for link checks.</li>
+
+          </ul>
+
+        </div>
+
+        <div class=&quot;timeline__item&quot;>
+
+          <h3>IT Coursework &amp; Labs</h3>
+
+          <ul>
+
+            <li>Built small apps with DOM scripting (todo list, weather, image gallery).</li>
+
+            <li>Practiced Git workflows: branching, PRs, and resolving merge conflicts.</li>
+
+          </ul>
+
+        </div>
+
+      </article>
+
+      <p class=&quot;note&quot;>Bringing over accounting strengths like data accuracy and process improvement helps with software reliability and automation.</p>
+
+    </section>
+
+    <!-- Education -->
+
+    <section id=&quot;education&quot; class=&quot;section&quot; aria-labelledby=&quot;edu-title&quot;>
+
+      <h2 id=&quot;edu-title&quot;>Education &amp; Certifications</h2>
+
+      <ul>
+
+        <li>Information Technology — 2026 (coursework emphasis: web development &amp; scripting)</li>
+
+        <li>CompTIA Tech+ — in progress</li>
+
+      </ul>
+
+    </section>
+
+    <!-- Contact -->
+
+    <section id=&quot;contact&quot; class=&quot;section&quot; aria-labelledby=&quot;contact-title&quot;>
+
+      <h2 id=&quot;contact-title&quot;>Contact</h2>
+
+      <form id=&quot;contactForm&quot; class=&quot;form&quot; novalidate>
+
+        <div class=&quot;field&quot;>
+
+          <label for=&quot;name&quot;>Name</label>
+
+          <input type=&quot;text&quot; id=&quot;name&quot; name=&quot;name&quot; required placeholder=&quot;Your name&quot; />
+
+          <small class=&quot;error&quot; id=&quot;nameError&quot;></small>
+
+        </div>
+
+        <div class=&quot;field&quot;>
+
+          <label for=&quot;email&quot;>Email</label>
+
+          <input type=&quot;email&quot; id=&quot;email&quot; name=&quot;email&quot; required placeholder=&quot;you@example.com&quot; />
+
+          <small class=&quot;error&quot; id=&quot;emailError&quot;></small>
+
+        </div>
+
+        <div class=&quot;field&quot;>
+
+          <label for=&quot;message&quot;>Message</label>
+
+          <textarea id=&quot;message&quot; name=&quot;message&quot; rows=&quot;5&quot; required placeholder=&quot;How can I help?&quot;></textarea>
+
+          <small class=&quot;error&quot; id=&quot;messageError&quot;></small>
+
+        </div>
+
+        <div class=&quot;form__actions&quot;>
+
+          <button type=&quot;submit&quot; class=&quot;btn&quot;>Send</button>
+
+          <button type=&quot;reset&quot; class=&quot;btn btn-outline&quot;>Reset</button>
+
+        </div>
+
+        <p class=&quot;form__status&quot; id=&quot;formStatus&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;></p>
+
+      </form>
+
+    </section>
+
+    <button id=&quot;backToTop&quot; class=&quot;back-to-top&quot; aria-label=&quot;Back to top&quot;>↑</button>
+
+  </main>
+
+  <footer class=&quot;site-footer&quot; role=&quot;contentinfo&quot;>
+
+    <p>© <span id=&quot;year&quot;></span> Antwon Woods. Built with HTML, CSS, and JavaScript.</p>
+
+  </footer>
+
+  <!-- Modal -->
+
+  <dialog id=&quot;projectModal&quot; aria-labelledby=&quot;projectModalTitle&quot;>
+
+    <article class=&quot;modal&quot;>
+
+      <header class=&quot;modal__header&quot;>
+
+        <h3 id=&quot;projectModalTitle&quot;>Project Details</h3>
+
+        <button class=&quot;btn btn-ghost&quot; id=&quot;closeModal&quot; aria-label=&quot;Close&quot;>✖</button>
+
+      </header>
+
+      <div id=&quot;projectModalBody&quot; class=&quot;modal__body&quot;></div>
+
+      <footer class=&quot;modal__footer&quot;></footer>
+
+    </article>
+
+  </dialog>
+
+  <script>
+
+  (function(){
+
+    // ========== THEME ==========
+
+    const prefersLight = window.matchMedia &amp;&amp; window.matchMedia('(prefers-color-scheme: light)').matches;
+
+    const stored = localStorage.getItem('theme');
+
+    const root = document.documentElement;
+
+    if(stored){ root.classList.toggle('light', stored==='light'); }
+
+    else if(prefersLight){ root.classList.add('light'); }
+
+    const themeToggle = document.getElementById('themeToggle');
+
+    function updateThemeLabel(){
+
+      const isLight = root.classList.contains('light');
+
+      themeToggle.setAttribute('aria-pressed', String(isLight));
+
+      themeToggle.title = isLight ? 'Switch to Dark' : 'Switch to Light';
+
+    }
+
+    updateThemeLabel();
+
+    themeToggle.addEventListener('click', ()=>{
+
+      root.classList.toggle('light');
+
+      localStorage.setItem('theme', root.classList.contains('light') ? 'light' : 'dark');
+
+      updateThemeLabel();
+
+    });
+
+    // ========== BACK TO TOP ==========
+
+    const backToTop = document.getElementById('backToTop');
+
+    window.addEventListener('scroll', ()=>{
+
+      backToTop.style.display = window.scrollY > 600 ? 'grid' : 'none';
+
+    });
+
+    backToTop.addEventListener('click', ()=>window.scrollTo({top:0, behavior:'smooth'}));
+
+    // ========== YEAR ==========
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // ========== FILTERS ==========
+
+    const filterBtns = Array.from(document.querySelectorAll('.filter'));
+
+    const cards = Array.from(document.querySelectorAll('.project'));
+
+    filterBtns.forEach(btn=>{
+
+      btn.addEventListener('click', ()=>{
+
+        filterBtns.forEach(b=>b.classList.remove('is-active'));
+
+        btn.classList.add('is-active');
+
+        const tag = btn.dataset.filter;
+
+        cards.forEach(card=>{
+
+          const tags = card.dataset.tags.split(/\s+/);
+
+          const show = tag==='all' || tags.includes(tag);
+
+          card.style.display = show ? '' : 'none';
+
+        });
+
+      })
+
+    });
+
+    // ========== MODAL (PROJECT DETAILS) ==========
+
+    const modal = document.getElementById('projectModal');
+
+    const modalTitle = document.getElementById('projectModalTitle');
+
+    const modalBody = document.getElementById('projectModalBody');
+
+    const closeModal = document.getElementById('closeModal');
+
+    document.body.addEventListener('click', (e)=>{
+
+      const btn = e.target.closest('.details-btn');
+
+      if(!btn) return;
+
+      const id = btn.dataset.project;
+
+      const content = ({
+
+        p1: { title: 'Personal Portfolio Website',
+
+              body: 'This website demonstrates responsive layout, semantic HTML, CSS custom properties, accessibility, dark/light mode, and vanilla JS for interactivity. Replace this text with your real project details, repository link, and live demo.' },
+
+        p2: { title: 'Weather App',
+
+              body: 'Built with Fetch API to retrieve weather data, includes error handling, loading states, and a clean UI. Replace with your implementation details and links.' },
+
+        p3: { title: 'Data Cleanup Script',
+
+              body: 'Python script using pandas to normalize CSV files, deduplicate records, and summarize results. Replace with your GitHub repo and usage instructions.' }
+
+      })[id];
+
+      modalTitle.textContent = content.title;
+
+      modalBody.textContent = content.body;
+
+      modal.showModal();
+
+    });
+
+    closeModal.addEventListener('click', ()=>modal.close());
+
+    modal.addEventListener('click', (e)=>{ if(e.target === modal) modal.close(); });
+
+    // ========== COPY EMAIL (keeps mailto working) ==========
+
+    document.querySelectorAll('.copyable').forEach(el=>{
+
+      el.addEventListener('click', ()=>{
+
+        const value = el.dataset.copy;
+
+        if(!value) return;
+
+        navigator.clipboard.writeText(value).then(()=>{
+
+          const prev = el.textContent;
+
+          el.textContent = 'Copied! ' + value;
+
+          setTimeout(()=>{ el.textContent = prev; }, 1200);
+
+        }).catch(()=>{ /* ignore */ });
+
+        // Do not preventDefault so mail client can also open
+
+      });
+
+    });
+
+    // ========== CONTACT FORM VALIDATION + MAILTO ==========
+
+    const form = document.getElementById('contactForm');
+
+    const status = document.getElementById('formStatus');
+
+    const f = id => document.getElementById(id);
+
+    function validate(){
+
+      let ok = true;
+
+      const nameEl = f('name');
+
+      const emailEl = f('email');
+
+      const msgEl = f('message');
+
+      f('nameError').textContent = '';
+
+      f('emailError').textContent = '';
+
+      f('messageError').textContent = '';
+
+      if(!nameEl.value.trim()){ f('nameError').textContent = 'Please enter your name.'; ok = false; }
+
+      if(!/^[^\s@]+@[^\s@]+**\.**[^\s@]+$/.test(emailEl.value)){ f('emailError').textContent = 'Enter a valid email.'; ok = false; }
+
+      if(msgEl.value.trim().length < 10){ f('messageError').textContent = 'Message should be at least 10 characters.'; ok = false; }
+
+      return ok;
+
+    }
+
+    form.addEventListener('submit', (e)=>{
+
+      e.preventDefault();
+
+      if(!validate()) return;
+
+      status.textContent = 'Preparing email…';
+
+      const subject = encodeURIComponent('Portfolio inquiry');
+
+      const body = encodeURIComponent(
+
+        `Name: ${f('name').value}\nEmail: ${f('email').value}\n\n${f('message').value}`
+
+      );
+
+      window.location.href = 'mailto:antwonwoods369@gmail.com?subject=' + subject + '&amp;body=' + body;
+
+      status.textContent = 'Opening your email client…';
+
+    });
+
+    // ========== RÉSUMÉ DOWNLOAD (Markdown placeholder) ==========
+
+    document.getElementById('downloadResume').addEventListener('click', (e)=>{
+
+      e.preventDefault();
+
+      const md = `# Antwon Woods — Software Developer
+
+Location: Cleveland, OH  |  Phone: 216-307-9076  |  Email: [antwonwoods369@gmail.com](mailto:antwonwoods369@gmail.com)
+
+## Summary
+
+Recent IT graduate focused on front-end development and scripting.
+
+## Skills
+
+HTML, CSS, JavaScript, Python, Git/GitHub, Responsive Design, Accessibility
+
+## Projects
+
+- Personal Portfolio Website — semantic HTML/CSS/JS, dark mode, filters.
+
+- Weather App — Fetch API, error handling, UI states.
+
+- Data Cleanup Script — pandas, CSV normalization.
+
+## Education
+
+Information Technology — 2026
+
+`;
+
+      const blob = new Blob([md], { type: 'text/markdown' });
+
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+
+      a.href = url; a.download = 'Antwon-Woods-Resume.md'; a.click();
+
+      setTimeout(()=>URL.revokeObjectURL(url), 1000);
+
+    });
+
+  })();
+
+  </script>
+
+</body>
+
+</html>" title="Portfolio"></iframe>
+  </div>
+
+<script>
+  // Build checkerboard bars
+  function buildChecker(id) {
+    const bar = document.getElementById(id);
+    for (let i = 0; i < 16; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'checker-cell';
+      cell.style.background = (i % 2 === (id === 'checker-top' ? 0 : 1)) ? '#000' : '#F8F8F8';
+      bar.appendChild(cell);
+    }
+  }
+  buildChecker('checker-top');
+  buildChecker('checker-bottom');
+
+  // Build pixel clouds
+  const cloudData = [
+    { x: 30, y: 60, w: 64, h: 24 },
+    { x: 120, y: 45, w: 48, h: 16 },
+    { x: 330, y: 55, w: 56, h: 20 },
+    { x: 420, y: 42, w: 40, h: 14 },
+  ];
+
+  const screen = document.getElementById('screen');
+
+  cloudData.forEach((c, i) => {
+    const cloud = document.createElement('div');
+    cloud.className = 'cloud';
+    Object.assign(cloud.style, {
+      left: c.x + 'px', top: c.y + 'px',
+      width: c.w + 'px', height: c.h + 'px',
+      animationDelay: (i * 0.7) + 's',
+      animation: `cloudFloat ${3 + i * 0.5}s ease-in-out infinite`,
+      zIndex: 2,
+      borderRadius: '4px',
+      boxShadow: `0 ${c.h}px 0 ${c.w * 0.3}px #F8F8F8`,
+    });
+    screen.appendChild(cloud);
+  });
+
+  // Draw pixel bushes using box-shadow blocks
+  const bushConfigs = [
+    { x: 8, side: 'left' },
+    { x: 8, side: 'right' },
+  ];
+
+  function drawBush(xOffset, isRight) {
+    const bush = document.createElement('canvas');
+    bush.width = 80;
+    bush.height = 56;
+    const ctx = bush.getContext('2d');
+    // Pixel bush pattern
+    const pixels = [
+      [0,0,0,0,0,1,1,0,0,0],
+      [0,0,0,1,1,1,1,1,1,0],
+      [0,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1],
+    ];
+    const colors = ['#58C800', '#70E010', '#48A800'];
+    pixels.forEach((row, ry) => {
+      row.forEach((on, rx) => {
+        if (on) {
+          ctx.fillStyle = ry < 2 ? colors[1] : ry > 4 ? colors[2] : colors[0];
+          ctx.fillRect(rx * 8, ry * 8, 8, 8);
+        }
+      });
+    });
+
+    const img = document.createElement('img');
+    img.src = bush.toDataURL();
+    img.style.cssText = `
+      position: absolute;
+      bottom: 68px;
+      ${isRight ? 'right: 8px' : 'left: 8px'};
+      width: 80px;
+      height: 56px;
+      image-rendering: pixelated;
+      z-index: 4;
+    `;
+    screen.appendChild(img);
+
+    // Second smaller bush
+    const bush2 = document.createElement('canvas');
+    bush2.width = 56;
+    bush2.height = 40;
+    const ctx2 = bush2.getContext('2d');
+    const pixels2 = [
+      [0,0,1,1,0,0,0],
+      [0,1,1,1,1,1,0],
+      [1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1],
+    ];
+    pixels2.forEach((row, ry) => {
+      row.forEach((on, rx) => {
+        if (on) {
+          ctx2.fillStyle = ry < 1 ? colors[1] : ry > 3 ? colors[2] : colors[0];
+          ctx2.fillRect(rx * 8, ry * 8, 8, 8);
+        }
+      });
+    });
+    const img2 = document.createElement('img');
+    img2.src = bush2.toDataURL();
+    img2.style.cssText = `
+      position: absolute;
+      bottom: 68px;
+      ${isRight ? 'right: 92px' : 'left: 92px'};
+      width: 56px;
+      height: 40px;
+      image-rendering: pixelated;
+      z-index: 4;
+    `;
+    screen.appendChild(img2);
+  }
+
+  drawBush(8, false);
+  drawBush(8, true);
+
+  // Menu navigation
+  let selectedIndex = 0;
+  const arrows = [
+    document.getElementById('arr-0'),
+    document.getElementById('arr-1'),
+    document.getElementById('arr-2'),
+  ];
+
+  function setSelected(i) {
+    arrows.forEach((a, idx) => {
+      if (idx === i) {
+        a.classList.remove('hidden');
+      } else {
+        a.classList.add('hidden');
+      }
+    });
+    selectedIndex = i;
+  }
+
+  // --- Retro Sound Engine (Web Audio API) ---
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  let audioCtx = null;
+  function getCtx() {
+    if (!audioCtx) audioCtx = new AudioCtx();
+    return audioCtx;
+  }
+  function playTone(freq, type, dur, vol, delay) {
+    const ctx = getCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+    gain.gain.setValueAtTime(vol, ctx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur);
+    osc.start(ctx.currentTime + delay);
+    osc.stop(ctx.currentTime + delay + dur + 0.01);
+  }
+  function playCursorSound() {
+    playTone(320, 'square', 0.08, 0.25, 0);
+  }
+  function playSelectSound() {
+    playTone(988,  'square', 0.07, 0.3, 0.00);
+    playTone(1319, 'square', 0.13, 0.3, 0.08);
+  }
+  const PIPE_SRC = 'data:audio/mp3;base64,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AAAgAAA0gAAABKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//sQZN2P8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr/+xBk3Y/wAABpAAAACAAADSAAAAEAAAGkAAAAIAAANIAAAASqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqv/7EGTdj/AAAGkAAAAIAAANIAAAAQAAAaQAAAAgAAA0gAAABKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//sQZN2P8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr/+xBk3Y/wAABpAAAACAAADSAAAAEAAAGkAAAAIAAANIAAAASqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqv/7EGTdj/AAAGkAAAAIAAANIAAAAQAAAaQAAAAgAAA0gAAABKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq';
+  let pipeSoundBuffer = null;
+
+  async function decodePipeSound() {
+    if (pipeSoundBuffer) return;
+    try {
+      const ctx = getCtx();
+      const b64 = PIPE_SRC.split(',')[1];
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      pipeSoundBuffer = await ctx.decodeAudioData(bytes.buffer.slice(0));
+    } catch(e) { console.warn('Pipe sound decode failed:', e); }
+  }
+
+  function playStartJingle() {
+    const ctx = getCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    if (!pipeSoundBuffer) {
+      decodePipeSound().then(() => {
+        if (!pipeSoundBuffer) return;
+        const src = ctx.createBufferSource();
+        src.buffer = pipeSoundBuffer;
+        const gain = ctx.createGain();
+        gain.gain.value = 0.85;
+        src.connect(gain);
+        gain.connect(ctx.destination);
+        src.start();
+      });
+      return;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = pipeSoundBuffer;
+    const gain = ctx.createGain();
+    gain.gain.value = 0.85;
+    src.connect(gain);
+    gain.connect(ctx.destination);
+    src.start();
+  }
+
+  document.querySelectorAll('.menu-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const i = parseInt(item.dataset.index);
+      setSelected(i);
+      playSelectSound();
+      setTimeout(triggerStart, 150);
+    });
+    item.addEventListener('mouseenter', () => {
+      decodePipeSound();
+      playCursorSound();
+      setSelected(parseInt(item.dataset.index));
+    });
+  });
+
+  function triggerStart() {
+    if (selectedIndex === 1) {
+      // CONTACT ME
+      playSelectSound();
+      showContactScreen();
+      return;
+    }
+    playStartJingle();
+    const overlay = document.getElementById('fade-overlay');
+    setTimeout(() => {
+      overlay.classList.add('active');
+    }, 700);
+    setTimeout(() => {
+      if (selectedIndex === 0) {
+        showPortfolio();
+      } else if (selectedIndex === 2) {
+        // window.location.href = 'projects.html'; // Update with your projects page
+      }
+      overlay.classList.remove('active');
+    }, 1900);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') {
+      playCursorSound();
+      setSelected((selectedIndex + 1) % 3);
+    } else if (e.key === 'ArrowUp') {
+      playCursorSound();
+      setSelected((selectedIndex + 2) % 3);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      playSelectSound();
+      setTimeout(triggerStart, 150);
+    }
+  });
+
+  // Add some decorative coins
+  const coinPositions = [
+    { x: 180, y: 200 }, { x: 200, y: 192 }, { x: 220, y: 200 },
+    { x: 290, y: 200 }, { x: 310, y: 192 }, { x: 330, y: 200 },
+  ];
+  coinPositions.forEach((pos, i) => {
+    const coin = document.createElement('div');
+    coin.className = 'coin';
+    coin.style.cssText = `
+      position: absolute;
+      left: ${pos.x}px;
+      top: ${pos.y}px;
+      width: 10px;
+      height: 10px;
+      background: #F8D030;
+      border: 2px solid #B86000;
+      z-index: 6;
+      animation: blink ${0.8 + i * 0.15}s step-end infinite;
+      animation-delay: ${i * 0.1}s;
+    `;
+    screen.appendChild(coin);
+  });
+
+  // Build contact screen checker bars
+  function buildContactChecker(id) {
+    const bar = document.getElementById(id);
+    if (!bar) return;
+    for (let i = 0; i < 16; i++) {
+      const cell = document.createElement('div');
+      cell.style.cssText = 'width:32px;height:32px;flex-shrink:0;background:' +
+        ((i % 2 === (id === 'cc-top' ? 0 : 1)) ? '#000' : '#F8F8F8');
+      bar.appendChild(cell);
+    }
+  }
+  buildContactChecker('cc-top');
+  buildContactChecker('cc-bottom');
+
+  function showContactScreen() {
+    document.getElementById('contact-screen').classList.add('visible');
+    document.getElementById('c-name').focus();
+  }
+  function hideContactScreen() {
+    document.getElementById('contact-screen').classList.remove('visible');
+    document.getElementById('form-msg').textContent = '';
+    document.getElementById('form-msg').className = '';
+    document.getElementById('c-name').value = '';
+    document.getElementById('c-email').value = '';
+    document.getElementById('c-phone').value = '';
+  }
+
+  document.getElementById('back-btn').addEventListener('click', () => {
+    playCursorSound();
+    hideContactScreen();
+  });
+
+  document.getElementById('submit-btn').addEventListener('click', () => {
+    const name  = document.getElementById('c-name').value.trim();
+    const email = document.getElementById('c-email').value.trim();
+    const phone = document.getElementById('c-phone').value.trim();
+    const msg   = document.getElementById('form-msg');
+
+    if (!name || !email || !phone) {
+      msg.textContent = '! PLEASE FILL ALL FIELDS !';
+      msg.className = 'error';
+      return;
+    }
+    const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailReg.test(email)) {
+      msg.textContent = '! INVALID EMAIL ADDRESS !';
+      msg.className = 'error';
+      return;
+    }
+
+    playSelectSound();
+
+    // Open mailto with prefilled details
+    const to      = 's01388943@acad.tri-c.edu';
+    const subject = encodeURIComponent('Portfolio Contact: ' + name);
+    const body    = encodeURIComponent(
+      'Name: ' + name + '\n' +
+      'Email: ' + email + '\n' +
+      'Phone: ' + phone
+    );
+    const mailtoLink = document.createElement('a');
+    mailtoLink.href = 'mailto:' + to + '?subject=' + subject + '&body=' + body;
+    mailtoLink.target = '_blank';
+    mailtoLink.rel = 'noopener noreferrer';
+    document.body.appendChild(mailtoLink);
+    mailtoLink.click();
+    document.body.removeChild(mailtoLink);
+
+    msg.textContent = '\u2605 MESSAGE SENT! THANK YOU! \u2605';
+    msg.className = 'success';
+  });
+
+
+  function showPortfolio() {
+    document.getElementById('portfolio-overlay').classList.add('visible');
+  }
+  function hidePortfolio() {
+    document.getElementById('portfolio-overlay').classList.remove('visible');
+  }
+  window.addEventListener('message', function(e) {
+    if (e.data === 'back-to-start') hidePortfolio();
+  });
+
+</script>
+</body>
+</html>
